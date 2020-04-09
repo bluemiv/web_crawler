@@ -3,8 +3,8 @@
 
 
 import os
-import tempfile
-import time
+import random
+import shutil
 
 
 def _create_file(dest, text, overwrite=False, encoding="utf-8"):
@@ -19,20 +19,22 @@ def _create_file(dest, text, overwrite=False, encoding="utf-8"):
     if not overwrite and os.path.exists(dest):
         raise RuntimeError("Already file is exists. => path: {}".format(dest))
 
-    with tempfile.TemporaryDirectory() as tmp:
-        if overwrite:
-            tmp_filepath = os.path.join(tmp, "{}_{}".format(time.time(), os.path.split(dest)[1]))
-            os.rename(dest, tmp_filepath)
+    # Overwrite
+    if overwrite:
+        tmp_dest = _get_new_filename(dest)
+        os.rename(dest, tmp_dest)
 
-    try:
+        try:
+            with open(dest, "w", encoding=encoding) as f:
+                f.write(text)
+            if os.path.exists(tmp_dest):
+                os.remove(tmp_dest)
+        except Exception as exc:
+            os.rename(tmp_dest, dest)  # 예상치 못한 에러 발생시 원복
+            raise exc
+    else:
         with open(dest, "w", encoding=encoding) as f:
             f.write(text)
-        if overwrite and os.path.exists(tmp_filepath):
-            os.remove(tmp_filepath)
-    except Exception as exc:
-        if overwrite:
-            os.rename(tmp_filepath, dest)  # 예상치 못한 에러 발생시 원복
-        raise exc
 
     return os.path.exists(dest) and os.path.getsize(dest)
 
@@ -61,7 +63,21 @@ def create_js_file(dest, text, overwrite=False, encoding="utf-8"):
     return _dest
 
 
-def _create_image(dest, byte_string, rename_save=False, overwrite=False):
+def _get_new_filename(filepath):
+    """해당 경로에 파일이 존재하는 경우, (재귀적으로) 새로운 이름을 반환한다.
+
+    :param filepath: 파일 경로
+    :return: 새로운 이름의 파일 경로
+    """
+    if os.path.exists(filepath):
+        base_dir, filename = os.path.split(filepath)
+        rename_path = os.path.join(base_dir, "{}{}".format(random.randrange(0, 10), filename))
+        return _get_new_filename(rename_path)
+    else:
+        return filepath
+
+
+def create_image(dest, byte_string, rename_save=False, overwrite=False):
     """이미지 파일을 저장한다.
 
     :param dest: 이미지 저장 경로
@@ -74,10 +90,44 @@ def _create_image(dest, byte_string, rename_save=False, overwrite=False):
         raise RuntimeError("Already image is exists. => path: {}".format(dest))
 
     # 바이트 문자열이 아니면 이미지 파일이 아니다.
-    assert isinstance(bytes, byte_string), "Invalid byte string for image. => path: {}".format(dest)
+    assert isinstance(byte_string, bytes), "Invalid byte string for image. => path: {}".format(dest)
 
-    # TODO rename_save 와 overwrite 기능 구현해야 함.
-    with open(dest, "wb") as f:
-        f.write(byte_string)
+    # Get rename file path
+    if rename_save:
+        dest = _get_new_filename(dest)
+        with open(dest, "wb") as f:
+            f.write(byte_string)
+
+    # Overwrite
+    elif not rename_save and overwrite:
+        tmp_dest = _get_new_filename(dest)
+        os.rename(dest, tmp_dest)
+
+        try:
+            with open(dest, "wb") as f:
+                f.write(byte_string)
+            if os.path.join(tmp_dest):
+                os.remove(tmp_dest)
+        except Exception as exc:
+            if os.path.join(tmp_dest):
+                os.rename(tmp_dest, dest)
+            raise exc
+
+    # Normal
+    else:
+        with open(dest, "wb") as f:
+            f.write(byte_string)
 
     return os.path.exists(dest) and os.path.getsize(dest)
+
+
+def remove(path):
+    """해당 경로의 파일 또는 디렉토리를 삭제한다.
+
+    :param path:
+    :return:
+    """
+    if os.path.exists(path):
+        method = shutil.rmtree if os.path.isdir(path) else os.remove
+        method(path)
+    return not os.path.exists(path)

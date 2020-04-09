@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import re
 import tempfile
 import unittest
 
@@ -82,6 +83,61 @@ class FileMangerUnitTest(unittest.TestCase):
             # With `.html` and Use encoding
             dest = os.path.join(tmp, "test4.js")
             self.assertTrue(dest, fm.create_js_file(dest=dest, text="Hello, World!", encoding="utf-8"))
+
+    def test_get_new_filename(self):
+        """_get_new_filename() Test"""
+        with tempfile.TemporaryDirectory() as tmp:
+            # rename test
+            filepath = os.path.join(tmp, "test.txt")
+
+            with open(filepath, "w") as f:
+                f.write("Hello, World!")
+
+            new_filepath = fm._get_new_filename(filepath)
+            self.assertTrue(re.match(r"^{}{}[0-9]+test\.txt$".format(tmp, os.path.sep), new_filepath))
+
+            # recursive rename test
+            for n in range(0, 10):
+                with open(os.path.join(tmp, "{}test.txt".format(n)), "w") as f:
+                    f.write("Hello, World!")
+            new_filepath = fm._get_new_filename(filepath)
+            self.assertTrue(re.match(r"^{}{}[0-9]+test\.txt$".format(tmp, os.path.sep), new_filepath))
+
+    def test_create_image(self):
+        """create_image() Test"""
+        with tempfile.TemporaryDirectory() as tmp:
+            # Create image
+            dest = os.path.join(tmp, "test.png")
+            self.assertTrue(fm.create_image(dest=dest, byte_string=b"Hello, World!"))
+            self.assertEqual(["test.png"], os.listdir(tmp))
+
+            # Overwrite
+            self.assertTrue(fm.create_image(dest=dest, byte_string=b"Hello, World!", overwrite=True))
+            self.assertEqual(["test.png"], os.listdir(tmp))
+
+            # Expected raise `RuntimeError` because of file is exists already.
+            self.assertRaises(RuntimeError, fm.create_image, dest=dest, byte_string=b"Hello, World!", overwrite=False)
+
+            # Rename and save
+            self.assertTrue(fm.create_image(dest=dest, byte_string=b"Hello, World!", rename_save=True))
+            self.assertEqual(2, len(os.listdir(tmp)))
+
+    def test_remove(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            # Remove file
+            filepath = os.path.join(tmp, "test.txt")
+            with open(filepath, "w") as f:
+                f.write("Hello, World!")
+            self.assertTrue(fm.remove(filepath))
+
+            # Remove Directory
+            dir_path = os.path.join(tmp, "test")
+            os.makedirs(dir_path)
+            self.assertTrue(fm.remove(dir_path))
+            
+            # Remove not exists file.
+            filepath = os.path.join(tmp, "not_exists_file.txt")
+            self.assertTrue(fm.remove(filepath))
 
 
 if __name__ == "__main__":
