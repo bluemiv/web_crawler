@@ -20,7 +20,7 @@ def _create_file(dest, text, overwrite=False, encoding="utf-8"):
         raise RuntimeError("Already file is exists. => path: {}".format(dest))
 
     # Overwrite
-    if overwrite:
+    if overwrite and os.path.exists(dest):
         tmp_dest = _get_new_filename(dest)
         os.rename(dest, tmp_dest)
 
