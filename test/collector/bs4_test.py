@@ -18,7 +18,7 @@ class Bs4UnitTest(unittest.TestCase):
 
     def test_get_page(self):
         """_get_page() Test"""
-        text = self.bs._get_page(self.google_url, verify=False, retry=1)
+        text = self.bs.get_page(self.google_url, verify=False, retry=1)
         self.assertTrue(text)
 
     def test_get_url_by_page(self):

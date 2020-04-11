@@ -12,7 +12,7 @@ class Bs4Collector:
         pass
 
     @staticmethod
-    def _get_page(url, verify=False, retry=5):
+    def get_page(url, verify=False, retry=5):
         """웹 페이지를 가져온다."""
         response = requests.get(url=url, verify=verify)
 
@@ -24,9 +24,10 @@ class Bs4Collector:
 
         return ""
 
-    def get_url_by_page(self, url):
+    def get_url_by_page(self, url, text=""):
         """웹 페이지 내부의 모든 url 을 가져온다."""
-        text = self._get_page(url)
+        text = self.get_page(url) if not text else text
+
         url_set = set()
 
         if text:
